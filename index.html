@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Var mı Bişey?</title>
 <meta name="theme-color" content="#12372f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Var mı Bişey">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐔</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -73,6 +78,9 @@ th{font-weight:600;color:var(--mut);font-size:.85rem}
 .pin .name-in{margin:0;border:0;background:transparent;color:var(--tile);padding:8px 4px;font-size:1.1rem;font-weight:600}
 .pin .name-in::placeholder{color:var(--mut);font-weight:400}
 .pin .name-in:focus{outline:none}
+.banner.warn{background:#8a5a0b}
+.chip.sm{padding:5px 12px;font-size:.85rem;border-width:1px}
+.hist tr[data-act]:active{background:rgba(255,255,255,.07)}
 .sec{font-weight:600;color:var(--mut);margin:16px 0 8px}
 .hist{font-size:.9rem}
 .small{font-size:.8rem;color:var(--mut)}
@@ -98,17 +106,26 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const $=s=>document.querySelector(s);
 
 function freshCur(){const k=S.players.length;return{pen:Array(k).fill(''),rem:Array(k).fill(''),end:Array(k).fill(''),rec:Array(k).fill(false),fin:-1}}
-function sums(){
+function sums(skip){
   const t=S.players.map(()=>0),rc=S.players.map(()=>0);
-  S.history.forEach(h=>h.rows.forEach((r,i)=>{t[i]+=r.score;rc[i]+=r.rec}));
+  S.history.forEach((h,hi)=>h.rows.forEach((r,i)=>{t[i]+=r.score;if(hi!==skip)rc[i]+=r.rec}));
   return{t,rc};
 }
 function rowScore(i){const c=S.cur;const rem=c.fin===i?0:n(c.rem[i]);return n(c.pen[i])+rem-(c.rec[i]?100:0)}
+function mkRows(){return S.players.map((_,k)=>({score:rowScore(k),rec:S.cur.rec[k]?1:0,fin:S.cur.fin===k?1:0,pen:n(S.cur.pen[k]),rem:S.cur.fin===k?0:n(S.cur.rem[k])}))}
+function recents(){try{return JSON.parse(localStorage.getItem('vmb-recent'))||[]}catch(e){return[]}}
+function saveRecent(names){try{const all=[...names,...recents()],seen={};const out=all.filter(x=>{const k=x.toLowerCase();return seen[k]?false:(seen[k]=1)}).slice(0,8);localStorage.setItem('vmb-recent',JSON.stringify(out))}catch(e){}}
 
+let warn='',wl=null,confettiDone=false;
+async function keepAwake(){try{if('wakeLock' in navigator&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.players)keepAwake()});
 function render(){
   const a=$('#app');
-  if(!S.players)return a.innerHTML=setupView();
-  if(S.history.length>=TOTAL)return a.innerHTML=winView();
+  if(!S.players){confettiDone=false;return a.innerHTML=setupView()}
+  keepAwake();
+  const done=S.history.length>=TOTAL;
+  if(done&&S.edit==null){a.innerHTML=winView();if(!confettiDone){confettiDone=true;confetti()}return}
+  if(!done)confettiDone=false;
   a.innerHTML=gameView();
 }
 
@@ -119,37 +136,41 @@ function setupView(){
   <div class="players">
     ${[1,2,3,4].map(i=>`<div class="pin c${i}"><span class="num">${i}</span><input class="name-in" id="p${i}" maxlength="16" autocomplete="off" aria-label="${i}. oyuncu adı" placeholder="${i}. oyuncu${i>2?' (isteğe bağlı)':''}" value="${esc((S.pendingNames||[])[i-1]||'')}"></div>`).join('')}
   </div>
+  ${recentView()}
   <h2>Oyun çarpanı</h2>
   <div class="chips">${[1,2,3,4,5].map(x=>`<button class="chip ${m===x?'on':''}" data-act="mult" data-v="${x}">${x===1?'Normal':x+'X'}</button>`).join('')}</div>
   <p class="small">Çarpan puanları değiştirmez, sadece iddianın büyüklüğünü gösterir.</p>
   <div style="height:14px"></div>
-  <button class="btn" data-act="start">Oyuna başla</button>
-  ${sessionView(true)}`;
+  <button class="btn" data-act="start">Oyuna başla</button>`;
 }
 
 function gameView(){
-  const {t,rc}=sums();
-  const r=S.history.length+1;
+  const {t,rc}=sums();const lock=sums(S.edit).rc;const ed=S.edit!=null;
+  const r=(ed?S.edit:S.history.length)+1;
+  const dl=((S.d0||0)+r-1)%S.players.length;
   const min=Math.min(...t);
   const lead=S.history.length?t.map(x=>x===min):t.map(()=>false);
-  return `<div class="top"><div><div class="round">${r}. el <span class="small">/ ${TOTAL}</span></div></div>
+  return `<div class="top"><div><div class="round">${ed?'✎ '+r+'. el düzenleniyor':r+'. el <span class="small">/ '+TOTAL+'</span>'}</div>
+    <div class="small" data-act="dealer" style="cursor:pointer">🎴 Dağıtan: <b>${esc(S.players[dl])}</b></div></div>
     <div>${S.mult>1?`<span class="badge">${S.mult}X</span>`:'<span class="small">Normal oyun</span>'}</div></div>
-  ${r===10?'<div class="banner">🧮 10. el: Toplama eli!</div>':''}
-  ${r===TOTAL?'<div class="banner" style="background:var(--red)">Son el! Bu el sonunda kazanan belli olacak.</div>':''}
+  ${ed?'<div class="banner">Düzenleme modu: kaydedince toplamlar yenilenir.</div>':''}
+  ${!ed&&r===10?'<div class="banner">🧮 10. el: Toplama eli!</div>':''}
+  ${!ed&&r===TOTAL?'<div class="banner" style="background:var(--red)">Son el! Bu el sonunda kazanan belli olacak.</div>':''}
   <table class="score"><tr><th>Oyuncu</th><th>Rekor</th><th>Toplam</th></tr>
   ${S.players.map((p,i)=>`<tr class="${lead[i]?'lead':''}"><td>${esc(p)}</td><td class="dots">${'●'.repeat(rc[i])}${'○'.repeat(2-rc[i])}</td><td>${t[i]}</td></tr>`).join('')}</table>
 
   <div class="sheet">
     <div class="ln hd"><span></span><span>El içi ceza</span><span>Elde kalan</span><span>El</span></div>
-    ${S.players.map((p,i)=>playerRow(p,i,rc[i])).join('')}
+    ${S.players.map((p,i)=>playerRow(p,i,lock[i])).join('')}
   </div>
 
-  <button class="btn" data-act="finish">${r===TOTAL?'Oyunu bitir':r+'. eli bitir'}</button>
+  ${warn&&!ed?`<div class="banner warn">${esc(warn)}</div>`:''}
+  ${ed?'<div class="row"><button class="btn ghost" data-act="canceledit">Vazgeç</button><button class="btn" data-act="saveedit">Değişikliği kaydet</button></div>':`<button class="btn" data-act="finish">${warn?'Yine de bitir':r===TOTAL?'Oyunu bitir':r+'. eli bitir'}</button>`}
   ${historyView()}
-  <div class="row" style="margin-top:18px">
+  ${ed?'':`<div class="row" style="margin-top:18px">
     ${S.history.length?'<button class="btn ghost" data-act="undo">Son eli geri al</button>':''}
     <button class="btn ghost" data-act="reset">Yeni oyun</button>
-  </div>`;
+  </div>`}`;
 }
 
 function playerRow(p,i,rcount){
@@ -163,38 +184,29 @@ function playerRow(p,i,rcount){
 }
 function historyView(){
   if(!S.history.length)return'';
-  return `<h2>El geçmişi</h2><table class="hist"><tr><th>El</th>${S.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
-  ${S.history.map(h=>`<tr><td>${h.round}</td>${h.rows.map(r=>`<td>${r.fin?'<b title="Eli bitirdi">—</b>'+(r.score?' '+r.score:''):r.score}${r.rec?' ●':''}</td>`).join('')}</tr>`).join('')}</table>`;
+  const ed=S.edit==null;
+  return `<h2>El geçmişi${ed?' <span class="small">(düzeltmek için ele dokun)</span>':''}</h2><table class="hist"><tr><th>El</th>${S.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
+  ${S.history.map((h,hi)=>`<tr ${ed?`data-act="edit" data-i="${hi}" style="cursor:pointer"`:''}><td>${h.round}${ed?' ✎':''}</td>${h.rows.map(r=>`<td>${r.fin?'<b title="Eli bitirdi">—</b>'+(r.score?' '+r.score:''):r.score}${r.rec?' ●':''}</td>`).join('')}</tr>`).join('')}</table>`;
 }
-const PAY={2:[250,-250],3:[250,0,-250],4:[250,125,-125,-250]};
-const fmt=v=>(v>0?'+':v<0?'−':'')+Math.abs(v);
-function payouts(t){
-  const tbl=PAY[t.length]||PAY[4];
-  const idx=t.map((_,i)=>i).sort((a,b)=>t[a]-t[b]);
-  const out=[],rank=[];let i=0;
-  while(i<idx.length){
-    let j=i;while(j+1<idx.length&&t[idx[j+1]]===t[idx[i]])j++;
-    let sum=0;for(let k=i;k<=j;k++)sum+=tbl[k];
-    for(let k=i;k<=j;k++){out[idx[k]]=sum/(j-i+1);rank[idx[k]]=i+1}
-    i=j+1;
-  }
-  return{out,rank,idx};
+function recentView(){const r=recents();if(!r.length)return'';return `<div class="small" style="margin:12px 0 6px">Son oynayanlar</div><div class="chips">${r.map(x=>`<button class="chip sm" data-act="pick" data-n="${esc(x)}">${esc(x)}</button>`).join('')}</div>`}
+function statsView(){
+  const st=S.players.map((p,i)=>{let fin=0,rec=0,pen=0,worst=-Infinity;S.history.forEach(h=>{const r=h.rows[i];fin+=r.fin?1:0;rec+=r.rec?1:0;pen+=r.pen||0;worst=Math.max(worst,r.score)});return{fin,rec,pen,worst}});
+  const mp=Math.max(...st.map(x=>x.pen));
+  return `<h2>İstatistikler</h2><table class="hist"><tr><th>Oyuncu</th><th>Bitirme</th><th>Rekor</th><th>El içi ceza</th><th>En kötü el</th></tr>${S.players.map((p,i)=>`<tr><td>${esc(p)}</td><td>${st[i].fin}</td><td>${st[i].rec}</td><td>${mp>0&&st[i].pen===mp?'<b>'+st[i].pen+'</b>':st[i].pen}</td><td>${st[i].worst}</td></tr>`).join('')}</table>`;
 }
-function sessionView(withReset){
-  const g=S.session||[];if(!g.length)return'';
-  const order=[],tot={};
-  g.forEach(x=>x.names.forEach((nm,i)=>{const k=nm.trim().toLowerCase();if(!(k in tot)){tot[k]=0;order.push({k,nm})}tot[k]+=x.pay[i]}));
-  const cell=(x,k)=>{const i=x.names.findIndex(nm=>nm.trim().toLowerCase()===k);return i<0?'':fmt(x.pay[i])};
-  return `<h2>Bugünün toplamı (${g.length} oyun)</h2>
-  <div style="overflow-x:auto"><table class="hist"><tr><th>Oyuncu</th>${g.map((_,i)=>`<th>${i+1}. oyun</th>`).join('')}<th>Toplam</th></tr>
-  ${order.map(o=>`<tr><td>${esc(o.nm)}</td>${g.map(x=>`<td>${cell(x,o.k)}</td>`).join('')}<td><b>${fmt(tot[o.k])}</b></td></tr>`).join('')}</table></div>
-  ${withReset?'<button class="btn ghost" style="margin-top:10px" data-act="resetday">Günü sıfırla</button>':''}`;
+function shareText(){
+  const {t}=sums();const idx=t.map((_,i)=>i).sort((a,b)=>t[a]-t[b]);const med=['🥇','🥈','🥉'];
+  return '🐔 Var mı Bişey? – '+TOTAL+' el bitti'+(S.mult>1?' ('+S.mult+'X)':'')+'\n🍗 Kazanan: '+S.players.filter((_,i)=>t[i]===t[idx[0]]).join(' & ')+'\n'+idx.map((i,k)=>(med[k]||(k+1)+'.')+' '+S.players[i]+': '+t[i]).join('\n');
 }
-function resultView(t){
-  const {out,rank,idx}=payouts(t);
-  return `<h2>Oyun sonucu</h2><table class="hist"><tr><th>Sıra</th><th>Oyuncu</th><th>Puan</th></tr>
-  ${idx.map(i=>`<tr><td>${rank[i]}.</td><td>${esc(S.players[i])}</td><td><b>${fmt(out[i])}</b></td></tr>`).join('')}</table>
-  <p class="small">Dereceye göre: 1. +250, 2. +125, 3. −125, 4. −250</p>`;
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const c=document.createElement('canvas');c.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9';
+  document.body.appendChild(c);const x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+  const cols=['#e8b23a','#c8372d','#1f5fa8','#f6efdc'];
+  const p=Array.from({length:120},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,w:6+Math.random()*6,h:8+Math.random()*8,vx:-1.5+Math.random()*3,vy:2+Math.random()*4,r:Math.random()*6,vr:-.2+Math.random()*.4,c:cols[Math.random()*4|0]}));
+  const t0=performance.now();
+  (function f(t){x.clearRect(0,0,c.width,c.height);p.forEach(q=>{q.x+=q.vx;q.y+=q.vy;q.r+=q.vr;x.save();x.translate(q.x,q.y);x.rotate(q.r);x.fillStyle=q.c;x.fillRect(-q.w/2,-q.h/2,q.w,q.h);x.restore()});
+    if(t-t0<4500)requestAnimationFrame(f);else c.remove()})(t0);
 }
 function winView(){
   const {t}=sums();const min=Math.min(...t);
@@ -202,61 +214,73 @@ function winView(){
   return `<div class="win"><div class="emoji">🍗</div><div class="small">Kazanan</div><div class="who">${names}</div>
   <div class="chicken">Winner winner chicken dinner!</div></div>
   <table class="score"><tr><th>Oyuncu</th><th>Toplam</th></tr>${S.players.map((p,i)=>`<tr class="${t[i]===min?'lead':''}"><td>${esc(p)}</td><td>${t[i]}</td></tr>`).join('')}</table>
-  ${resultView(t)}
-  ${sessionView(false)}
+  ${statsView()}
   ${historyView()}
-  <div class="row" style="margin-top:18px"><button class="btn ghost" data-act="undo">Son eli geri al</button><button class="btn" data-act="reset">Yeni oyun</button></div>`;
+  <button class="btn" style="margin-top:18px" data-act="share">Sonucu WhatsApp'ta paylaş</button>
+  <div class="row" style="margin-top:10px"><button class="btn ghost" data-act="undo">Son eli geri al</button><button class="btn ghost" data-act="reset">Yeni oyun</button></div>`;
 }
 
 document.addEventListener('input',e=>{
-  const f=e.target.dataset.f;if(!f||!S.cur)return;
+  const f=e.target.dataset.f;if(!f||!S.cur)return;warn='';
   const i=+e.target.dataset.i;S.cur[f][i]=e.target.value;save();
   const el=$('#sc'+i);if(el){const sc=rowScore(i);el.textContent=(sc>0?'+':'')+sc;el.className='sc'+(sc<0?' neg':'')}
 });
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]');if(!b)return;
-  const act=b.dataset.act,i=+b.dataset.i;
+  const act=b.dataset.act,i=+b.dataset.i;keepAwake();
   if(act==='mult'){stashSetup();S.pendingMult=+b.dataset.v;render()}
   else if(act==='start'){
     const names=[1,2,3,4].map(k=>$('#p'+k).value.trim()).filter(Boolean);
     if(names.length<2){alert('En az 2 oyuncu adı yaz.');return}
-    S={players:names,mult:S.pendingMult||1,history:[],session:S.session||[]};S.cur=freshCur();save();render();
+    saveRecent(names);warn='';S={players:names,mult:S.pendingMult||1,history:[]};S.cur=freshCur();save();render();
   }
-  else if(act==='rec'){S.cur.rec[i]=!S.cur.rec[i];save();render()}
+  else if(act==='rec'){warn='';S.cur.rec[i]=!S.cur.rec[i];save();render()}
   else if(act==='fin'){
-    const was=S.cur.fin===i;
+    warn='';const was=S.cur.fin===i;
     if(S.cur.fin>=0)S.cur.rem[S.cur.fin]='';
     S.cur.fin=was?-1:i;
     if(!was)S.cur.rem[i]='0';
     save();render();
   }
   else if(act==='finish'){
+    if(!warn){const m=S.cur.fin<0?'Kimse “Bitirdi” olarak işaretlenmedi.':S.players.every((_,k)=>rowScore(k)===0)?'Hiç puan yazılmadı.':'';
+      if(m){warn=m+' Yine de eli bitirelim mi?';render();return}}
+    warn='';
     const r=S.history.length+1;
-    S.history.push({round:r,rows:S.players.map((_,k)=>({score:rowScore(k),rec:S.cur.rec[k]?1:0,fin:S.cur.fin===k?1:0}))});
-    if(S.history.length===TOTAL){
-      S.session=S.session||[];
-      S.session.push({names:S.players.slice(),pay:payouts(sums().t).out});
-    }
+    S.history.push({round:r,rows:mkRows()});
     S.cur=freshCur();save();render();scrollTo(0,0);
   }
+  else if(act==='edit'){
+    if(S.edit!=null)return;warn='';
+    const h=S.history[i];S.stash=S.cur;S.edit=i;
+    S.cur={pen:h.rows.map(r=>String(r.pen||'')),rem:h.rows.map(r=>r.fin?'0':String(r.rem!=null?r.rem:r.score+(r.rec?100:0))),rec:h.rows.map(r=>!!r.rec),fin:h.rows.findIndex(r=>r.fin)};
+    save();render();scrollTo(0,0);
+  }
+  else if(act==='saveedit'||act==='canceledit'){
+    if(act==='saveedit')S.history[S.edit].rows=mkRows();
+    S.cur=S.stash;delete S.stash;S.edit=null;save();render();scrollTo(0,0);
+  }
+  else if(act==='dealer'){S.d0=((S.d0||0)+1)%S.players.length;save();render()}
+  else if(act==='pick'){
+    const nm=b.dataset.n,ins=[1,2,3,4].map(k=>$('#p'+k));
+    if(!ins.some(x=>x.value.trim().toLowerCase()===nm.toLowerCase())){const e=ins.find(x=>!x.value.trim());if(e)e.value=nm}
+  }
+  else if(act==='share'){window.open('https://wa.me/?text='+encodeURIComponent(shareText()),'_blank')}
   else if(act==='undo'){
     if(!confirm('Son el silinsin mi?'))return;
-    if(S.history.length===TOTAL&&S.session&&S.session.length)S.session.pop();
     S.history.pop();S.cur=freshCur();save();render();
   }
   else if(act==='reset'){
     const bitti=S.history.length>=TOTAL;
     if(!bitti&&!confirm('Oyun silinip yeni oyun başlasın mı?'))return;
-    S={pendingNames:S.players||[],pendingMult:S.mult||1,session:S.session||[]};save();render();scrollTo(0,0);
+    S={pendingNames:S.players||[],pendingMult:S.mult||1};save();render();scrollTo(0,0);
   }
-  else if(act==='resetday'){
-    if(!confirm('Bugünün tüm oyun kayıtları silinsin mi?'))return;
-    S.session=[];save();render();
-  }
+
 });
 function stashSetup(){S.pendingNames=[1,2,3,4].map(k=>($('#p'+k)||{}).value||'')}
 render();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
