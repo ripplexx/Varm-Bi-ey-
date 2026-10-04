@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Var mı Bişey?</title>
+<meta name="theme-color" content="#12372f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐔</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--felt:#12372f;--felt2:#0d2a24;--tile:#f6efdc;--ink:#1d1a14;--red:#c8372d;--blue:#1f5fa8;--gold:#e8b23a;--mut:#8aa59c;--line:#2b5a4f;
+font-family:'Bricolage Grotesque',system-ui,sans-serif;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*:before,*:after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--felt);color:var(--tile);min-height:100%;line-height:1.35}
+main{max-width:640px;margin:0 auto;padding:16px 14px 60px}
+h1{font-size:2.1rem;font-weight:800;margin:6px 0 2px;letter-spacing:-.02em}
+h2{font-size:1.1rem;margin:22px 0 8px;font-weight:600}
+.sub{color:var(--mut);margin:0 0 18px}
+.tile{background:var(--tile);color:var(--ink);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 3px 0 #bfb394}
+label{display:block;font-size:.85rem;margin:0 0 4px;color:#5b5646}
+input{width:100%;font:inherit;font-size:1.05rem;padding:10px 12px;border:2px solid #cfc5a8;border-radius:8px;background:#fffdf6;color:var(--ink)}
+input:focus,button:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.name-in{margin-bottom:10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:inherit;font-weight:600;border:2px solid var(--tile);background:transparent;color:var(--tile);border-radius:999px;padding:8px 16px;cursor:pointer}
+.chip.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.btn{font:inherit;font-weight:800;font-size:1.05rem;width:100%;border:0;border-radius:12px;padding:14px;background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 #a97f1c}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--tile);border:2px solid var(--line);box-shadow:none;font-weight:600;font-size:.95rem;padding:10px}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{background:var(--red);color:#fff;border-radius:6px;padding:2px 9px;font-weight:800}
+.round{font-size:1.5rem;font-weight:800}
+.banner{background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;margin:10px 0}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--mut);font-size:.85rem}
+.score td{font-size:1.15rem;font-weight:800}
+.score tr.lead td:first-child:before{content:"👑 "}
+.dots{letter-spacing:2px;color:var(--gold)}
+.pname{font-weight:800;font-size:1.1rem;margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+.pname span{font-size:.9rem;font-weight:600;color:var(--red)}
+.pname span.neg{color:#1d7a4d}
+.in-line{display:flex;gap:8px;align-items:flex-end}
+.in-line>div{flex:1}
+.mini{font:inherit;font-weight:700;border:2px solid var(--ink);background:transparent;border-radius:8px;padding:10px 12px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.rec{font:inherit;font-weight:700;width:100%;margin-top:8px;border:2px dashed #a89d7c;background:transparent;border-radius:8px;padding:9px;cursor:pointer;color:#5b5646}
+.rec.on{background:var(--gold);border:2px solid var(--ink);color:var(--ink)}
+.rec:disabled{opacity:.4;cursor:not-allowed}
+.sheet{border-top:1px solid var(--line)}
+.pl{padding:10px 0;border-bottom:1px solid var(--line)}
+.ln{display:grid;grid-template-columns:1fr 76px 76px 52px;gap:8px;align-items:center}
+.ln.hd{font-size:.75rem;color:var(--mut);padding:8px 0 0;text-align:center}
+.ln.hd span:first-child{text-align:left}
+.ln b{font-size:1.05rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ln input{padding:8px 6px;text-align:center;font-size:1rem;border-radius:8px}
+.ln input:disabled{opacity:.5}
+.sc{text-align:right;font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.sc.neg{color:#7fe0a8}
+.acts{display:flex;gap:6px;margin-top:8px}
+.pill{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--line);background:transparent;color:var(--tile);border-radius:999px;padding:5px 12px;cursor:pointer}
+.pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.pill:disabled{opacity:.35;cursor:not-allowed}
+.players{display:grid;gap:10px}
+.pin{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;padding:6px 8px 6px 6px;transition:border-color .15s,background .15s}
+.pin:focus-within{border-color:var(--gold);background:rgba(0,0,0,.32)}
+.pin .num{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:1.1rem;background:var(--tile);color:var(--c);box-shadow:0 2px 0 #bfb394}
+.pin.c1{--c:#c8372d}.pin.c2{--c:#1f5fa8}.pin.c3{--c:#1d1a14}.pin.c4{--c:#c98a0c}
+.pin .name-in{margin:0;border:0;background:transparent;color:var(--tile);padding:8px 4px;font-size:1.1rem;font-weight:600}
+.pin .name-in::placeholder{color:var(--mut);font-weight:400}
+.pin .name-in:focus{outline:none}
+.sec{font-weight:600;color:var(--mut);margin:16px 0 8px}
+.hist{font-size:.9rem}
+.small{font-size:.8rem;color:var(--mut)}
+.win{text-align:center;padding:30px 10px}
+.win .who{font-size:2.6rem;font-weight:800;letter-spacing:-.02em;color:var(--gold);margin:8px 0}
+.win .chicken{font-size:1.5rem;font-weight:800;animation:bob 1.2s ease-in-out infinite alternate}
+.win .emoji{font-size:5rem}
+@keyframes bob{to{transform:translateY(-8px) rotate(-2deg)}}
+@media(prefers-reduced-motion:reduce){.win .chicken{animation:none}}
+@media(prefers-color-scheme:dark){:root{--felt:#0d2a24}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const KEY='tavuk-defteri-101';
+const TOTAL=11;
+let S=load();
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const n=v=>parseInt(v,10)||0;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+
+function freshCur(){const k=S.players.length;return{pen:Array(k).fill(''),rem:Array(k).fill(''),end:Array(k).fill(''),rec:Array(k).fill(false),fin:-1}}
+function sums(){
+  const t=S.players.map(()=>0),rc=S.players.map(()=>0);
+  S.history.forEach(h=>h.rows.forEach((r,i)=>{t[i]+=r.score;rc[i]+=r.rec}));
+  return{t,rc};
+}
+function rowScore(i){const c=S.cur;const rem=c.fin===i?0:n(c.rem[i]);return n(c.pen[i])+rem-(c.rec[i]?100:0)}
+
+function render(){
+  const a=$('#app');
+  if(!S.players)return a.innerHTML=setupView();
+  if(S.history.length>=TOTAL)return a.innerHTML=winView();
+  a.innerHTML=gameView();
+}
+
+function setupView(){
+  const m=S.pendingMult||1;
+  return `<h1>🐔 Var mı Bişey?</h1>
+  <p class="sub">101 için yaz-boz. Oyuncuları yaz, çarpanı seç, başla.</p>
+  <div class="players">
+    ${[1,2,3,4].map(i=>`<div class="pin c${i}"><span class="num">${i}</span><input class="name-in" id="p${i}" maxlength="16" autocomplete="off" aria-label="${i}. oyuncu adı" placeholder="${i}. oyuncu${i>2?' (isteğe bağlı)':''}" value="${esc((S.pendingNames||[])[i-1]||'')}"></div>`).join('')}
+  </div>
+  <h2>Oyun çarpanı</h2>
+  <div class="chips">${[1,2,3,4,5].map(x=>`<button class="chip ${m===x?'on':''}" data-act="mult" data-v="${x}">${x===1?'Normal':x+'X'}</button>`).join('')}</div>
+  <p class="small">Çarpan puanları değiştirmez, sadece iddianın büyüklüğünü gösterir.</p>
+  <div style="height:14px"></div>
+  <button class="btn" data-act="start">Oyuna başla</button>`;
+}
+
+function gameView(){
+  const {t,rc}=sums();
+  const r=S.history.length+1;
+  const min=Math.min(...t);
+  const lead=S.history.length?t.map(x=>x===min):t.map(()=>false);
+  return `<div class="top"><div><div class="round">${r}. el <span class="small">/ ${TOTAL}</span></div></div>
+    <div>${S.mult>1?`<span class="badge">${S.mult}X</span>`:'<span class="small">Normal oyun</span>'}</div></div>
+  ${r===10?'<div class="banner">🧮 10. el: Toplama eli!</div>':''}
+  ${r===TOTAL?'<div class="banner" style="background:var(--red)">Son el! Bu el sonunda kazanan belli olacak.</div>':''}
+  <table class="score"><tr><th>Oyuncu</th><th>Rekor</th><th>Toplam</th></tr>
+  ${S.players.map((p,i)=>`<tr class="${lead[i]?'lead':''}"><td>${esc(p)}</td><td class="dots">${'●'.repeat(rc[i])}${'○'.repeat(2-rc[i])}</td><td>${t[i]}</td></tr>`).join('')}</table>
+
+  <div class="sheet">
+    <div class="ln hd"><span></span><span>El içi ceza</span><span>Elde kalan</span><span>El</span></div>
+    ${S.players.map((p,i)=>playerRow(p,i,rc[i])).join('')}
+  </div>
+
+  <button class="btn" data-act="finish">${r===TOTAL?'Oyunu bitir':r+'. eli bitir'}</button>
+  ${historyView()}
+  <div class="row" style="margin-top:18px">
+    ${S.history.length?'<button class="btn ghost" data-act="undo">Son eli geri al</button>':''}
+    <button class="btn ghost" data-act="reset">Yeni oyun</button>
+  </div>`;
+}
+
+function playerRow(p,i,rcount){
+  const c=S.cur,fin=c.fin===i,on=c.rec[i],locked=rcount>=2&&!on,sc=rowScore(i);
+  return `<div class="pl"><div class="ln"><b>${esc(p)}</b>
+  <input aria-label="${esc(p)} el içi ceza" type="number" inputmode="numeric" placeholder="0" data-f="pen" data-i="${i}" value="${c.pen[i]}">
+  <input aria-label="${esc(p)} elde kalan" type="number" inputmode="numeric" placeholder="0" data-f="rem" data-i="${i}" value="${fin?0:c.rem[i]}" ${fin?'disabled':''}>
+  <span class="sc ${sc<0?'neg':''}" id="sc${i}">${sc>0?'+':''}${sc}</span></div>
+  <div class="acts"><button class="pill" data-act="add101" data-i="${i}">+101</button>
+  <button class="pill ${on?'on':''}" data-act="rec" data-i="${i}" ${locked?'disabled':''}>${on?'Rekor açtı −100':'Rekor'}</button>
+  <button class="pill ${fin?'on':''}" data-act="fin" data-i="${i}">${fin?'Bitirdi —':'Bitirdi'}</button></div></div>`;
+}
+function historyView(){
+  if(!S.history.length)return'';
+  return `<h2>El geçmişi</h2><table class="hist"><tr><th>El</th>${S.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
+  ${S.history.map(h=>`<tr><td>${h.round}</td>${h.rows.map(r=>`<td>${r.fin?'<b title="Eli bitirdi">—</b>'+(r.score?' '+r.score:''):r.score}${r.rec?' ●':''}</td>`).join('')}</tr>`).join('')}</table>`;
+}
+function winView(){
+  const {t}=sums();const min=Math.min(...t);
+  const names=S.players.filter((_,i)=>t[i]===min).map(esc).join(' &amp; ');
+  return `<div class="win"><div class="emoji">🍗</div><div class="small">Kazanan</div><div class="who">${names}</div>
+  <div class="chicken">Winner winner chicken dinner!</div></div>
+  <table class="score"><tr><th>Oyuncu</th><th>Toplam</th></tr>${S.players.map((p,i)=>`<tr class="${t[i]===min?'lead':''}"><td>${esc(p)}</td><td>${t[i]}</td></tr>`).join('')}</table>
+  ${historyView()}
+  <div class="row" style="margin-top:18px"><button class="btn ghost" data-act="undo">Son eli geri al</button><button class="btn" data-act="reset">Yeni oyun</button></div>`;
+}
+
+document.addEventListener('input',e=>{
+  const f=e.target.dataset.f;if(!f||!S.cur)return;
+  const i=+e.target.dataset.i;S.cur[f][i]=e.target.value;save();
+  const el=$('#sc'+i);if(el){const sc=rowScore(i);el.textContent=(sc>0?'+':'')+sc;el.className='sc'+(sc<0?' neg':'')}
+});
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const act=b.dataset.act,i=+b.dataset.i;
+  if(act==='mult'){stashSetup();S.pendingMult=+b.dataset.v;render()}
+  else if(act==='start'){
+    const names=[1,2,3,4].map(k=>$('#p'+k).value.trim()).filter(Boolean);
+    if(names.length<2){alert('En az 2 oyuncu adı yaz.');return}
+    S={players:names,mult:S.pendingMult||1,history:[]};S.cur=freshCur();save();render();
+  }
+  else if(act==='add101'){S.cur.pen[i]=String(n(S.cur.pen[i])+101);save();render()}
+  else if(act==='rec'){S.cur.rec[i]=!S.cur.rec[i];save();render()}
+  else if(act==='fin'){
+    const was=S.cur.fin===i;
+    if(S.cur.fin>=0)S.cur.rem[S.cur.fin]='';
+    S.cur.fin=was?-1:i;
+    if(!was)S.cur.rem[i]='0';
+    save();render();
+  }
+  else if(act==='finish'){
+    const r=S.history.length+1;
+    S.history.push({round:r,rows:S.players.map((_,k)=>({score:rowScore(k),rec:S.cur.rec[k]?1:0,fin:S.cur.fin===k?1:0}))});
+    S.cur=freshCur();save();render();scrollTo(0,0);
+  }
+  else if(act==='undo'){
+    if(!confirm('Son el silinsin mi?'))return;
+    S.history.pop();S.cur=freshCur();save();render();
+  }
+  else if(act==='reset'){
+    const bitti=S.history.length>=TOTAL;
+    if(!bitti&&!confirm('Oyun silinip yeni oyun başlasın mı?'))return;
+    S={pendingNames:S.players||[],pendingMult:S.mult||1};save();render();scrollTo(0,0);
+  }
+});
+function stashSetup(){S.pendingNames=[1,2,3,4].map(k=>($('#p'+k)||{}).value||'')}
+render();
+</script>
+</body>
+</html>
