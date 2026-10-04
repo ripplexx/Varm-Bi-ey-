@@ -123,7 +123,8 @@ function setupView(){
   <div class="chips">${[1,2,3,4,5].map(x=>`<button class="chip ${m===x?'on':''}" data-act="mult" data-v="${x}">${x===1?'Normal':x+'X'}</button>`).join('')}</div>
   <p class="small">Çarpan puanları değiştirmez, sadece iddianın büyüklüğünü gösterir.</p>
   <div style="height:14px"></div>
-  <button class="btn" data-act="start">Oyuna başla</button>`;
+  <button class="btn" data-act="start">Oyuna başla</button>
+  ${sessionView(true)}`;
 }
 
 function gameView(){
@@ -157,8 +158,7 @@ function playerRow(p,i,rcount){
   <input aria-label="${esc(p)} el içi ceza" type="number" inputmode="numeric" placeholder="0" data-f="pen" data-i="${i}" value="${c.pen[i]}">
   <input aria-label="${esc(p)} elde kalan" type="number" inputmode="numeric" placeholder="0" data-f="rem" data-i="${i}" value="${fin?0:c.rem[i]}" ${fin?'disabled':''}>
   <span class="sc ${sc<0?'neg':''}" id="sc${i}">${sc>0?'+':''}${sc}</span></div>
-  <div class="acts"><button class="pill" data-act="add101" data-i="${i}">+101</button>
-  <button class="pill ${on?'on':''}" data-act="rec" data-i="${i}" ${locked?'disabled':''}>${on?'Rekor açtı −100':'Rekor'}</button>
+  <div class="acts"><button class="pill ${on?'on':''}" data-act="rec" data-i="${i}" ${locked?'disabled':''}>${on?'Rekor açtı −100':'Rekor'}</button>
   <button class="pill ${fin?'on':''}" data-act="fin" data-i="${i}">${fin?'Bitirdi —':'Bitirdi'}</button></div></div>`;
 }
 function historyView(){
@@ -166,12 +166,44 @@ function historyView(){
   return `<h2>El geçmişi</h2><table class="hist"><tr><th>El</th>${S.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
   ${S.history.map(h=>`<tr><td>${h.round}</td>${h.rows.map(r=>`<td>${r.fin?'<b title="Eli bitirdi">—</b>'+(r.score?' '+r.score:''):r.score}${r.rec?' ●':''}</td>`).join('')}</tr>`).join('')}</table>`;
 }
+const PAY={2:[250,-250],3:[250,0,-250],4:[250,125,-125,-250]};
+const fmt=v=>(v>0?'+':v<0?'−':'')+Math.abs(v);
+function payouts(t){
+  const tbl=PAY[t.length]||PAY[4];
+  const idx=t.map((_,i)=>i).sort((a,b)=>t[a]-t[b]);
+  const out=[],rank=[];let i=0;
+  while(i<idx.length){
+    let j=i;while(j+1<idx.length&&t[idx[j+1]]===t[idx[i]])j++;
+    let sum=0;for(let k=i;k<=j;k++)sum+=tbl[k];
+    for(let k=i;k<=j;k++){out[idx[k]]=sum/(j-i+1);rank[idx[k]]=i+1}
+    i=j+1;
+  }
+  return{out,rank,idx};
+}
+function sessionView(withReset){
+  const g=S.session||[];if(!g.length)return'';
+  const order=[],tot={};
+  g.forEach(x=>x.names.forEach((nm,i)=>{const k=nm.trim().toLowerCase();if(!(k in tot)){tot[k]=0;order.push({k,nm})}tot[k]+=x.pay[i]}));
+  const cell=(x,k)=>{const i=x.names.findIndex(nm=>nm.trim().toLowerCase()===k);return i<0?'':fmt(x.pay[i])};
+  return `<h2>Bugünün toplamı (${g.length} oyun)</h2>
+  <div style="overflow-x:auto"><table class="hist"><tr><th>Oyuncu</th>${g.map((_,i)=>`<th>${i+1}. oyun</th>`).join('')}<th>Toplam</th></tr>
+  ${order.map(o=>`<tr><td>${esc(o.nm)}</td>${g.map(x=>`<td>${cell(x,o.k)}</td>`).join('')}<td><b>${fmt(tot[o.k])}</b></td></tr>`).join('')}</table></div>
+  ${withReset?'<button class="btn ghost" style="margin-top:10px" data-act="resetday">Günü sıfırla</button>':''}`;
+}
+function resultView(t){
+  const {out,rank,idx}=payouts(t);
+  return `<h2>Oyun sonucu</h2><table class="hist"><tr><th>Sıra</th><th>Oyuncu</th><th>Puan</th></tr>
+  ${idx.map(i=>`<tr><td>${rank[i]}.</td><td>${esc(S.players[i])}</td><td><b>${fmt(out[i])}</b></td></tr>`).join('')}</table>
+  <p class="small">Dereceye göre: 1. +250, 2. +125, 3. −125, 4. −250</p>`;
+}
 function winView(){
   const {t}=sums();const min=Math.min(...t);
   const names=S.players.filter((_,i)=>t[i]===min).map(esc).join(' &amp; ');
   return `<div class="win"><div class="emoji">🍗</div><div class="small">Kazanan</div><div class="who">${names}</div>
   <div class="chicken">Winner winner chicken dinner!</div></div>
   <table class="score"><tr><th>Oyuncu</th><th>Toplam</th></tr>${S.players.map((p,i)=>`<tr class="${t[i]===min?'lead':''}"><td>${esc(p)}</td><td>${t[i]}</td></tr>`).join('')}</table>
+  ${resultView(t)}
+  ${sessionView(false)}
   ${historyView()}
   <div class="row" style="margin-top:18px"><button class="btn ghost" data-act="undo">Son eli geri al</button><button class="btn" data-act="reset">Yeni oyun</button></div>`;
 }
@@ -189,9 +221,8 @@ document.addEventListener('click',e=>{
   else if(act==='start'){
     const names=[1,2,3,4].map(k=>$('#p'+k).value.trim()).filter(Boolean);
     if(names.length<2){alert('En az 2 oyuncu adı yaz.');return}
-    S={players:names,mult:S.pendingMult||1,history:[]};S.cur=freshCur();save();render();
+    S={players:names,mult:S.pendingMult||1,history:[],session:S.session||[]};S.cur=freshCur();save();render();
   }
-  else if(act==='add101'){S.cur.pen[i]=String(n(S.cur.pen[i])+101);save();render()}
   else if(act==='rec'){S.cur.rec[i]=!S.cur.rec[i];save();render()}
   else if(act==='fin'){
     const was=S.cur.fin===i;
@@ -203,16 +234,25 @@ document.addEventListener('click',e=>{
   else if(act==='finish'){
     const r=S.history.length+1;
     S.history.push({round:r,rows:S.players.map((_,k)=>({score:rowScore(k),rec:S.cur.rec[k]?1:0,fin:S.cur.fin===k?1:0}))});
+    if(S.history.length===TOTAL){
+      S.session=S.session||[];
+      S.session.push({names:S.players.slice(),pay:payouts(sums().t).out});
+    }
     S.cur=freshCur();save();render();scrollTo(0,0);
   }
   else if(act==='undo'){
     if(!confirm('Son el silinsin mi?'))return;
+    if(S.history.length===TOTAL&&S.session&&S.session.length)S.session.pop();
     S.history.pop();S.cur=freshCur();save();render();
   }
   else if(act==='reset'){
     const bitti=S.history.length>=TOTAL;
     if(!bitti&&!confirm('Oyun silinip yeni oyun başlasın mı?'))return;
-    S={pendingNames:S.players||[],pendingMult:S.mult||1};save();render();scrollTo(0,0);
+    S={pendingNames:S.players||[],pendingMult:S.mult||1,session:S.session||[]};save();render();scrollTo(0,0);
+  }
+  else if(act==='resetday'){
+    if(!confirm('Bugünün tüm oyun kayıtları silinsin mi?'))return;
+    S.session=[];save();render();
   }
 });
 function stashSetup(){S.pendingNames=[1,2,3,4].map(k=>($('#p'+k)||{}).value||'')}
