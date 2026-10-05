@@ -66,10 +66,42 @@ th{font-weight:600;color:var(--mut);font-size:.85rem}
 .ln input:disabled{opacity:.5}
 .sc{text-align:right;font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums}
 .sc.neg{color:#7fe0a8}
-.acts{display:flex;gap:6px;margin-top:8px}
+.acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center}
 .pill{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--line);background:transparent;color:var(--tile);border-radius:999px;padding:5px 12px;cursor:pointer}
 .pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
 .pill:disabled{opacity:.35;cursor:not-allowed}
+.ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.ph b{font-size:1.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl{margin:8px 0}
+.fl>span{display:block;font-size:.75rem;color:var(--mut);margin-bottom:4px}
+.fl .in-line{display:flex;gap:6px;align-items:center}
+.fl input{flex:1;width:auto;min-width:0;height:42px;text-align:center;padding:0 6px;font-size:1.05rem}
+.fl input:disabled{opacity:.5}
+.sg{font:inherit;font-weight:800;font-size:1.05rem;height:42px;min-width:44px;padding:0 12px;border:1px solid var(--line);background:transparent;color:var(--tile);border-radius:10px;cursor:pointer;white-space:nowrap}
+.sg.add{background:var(--gold);border-color:var(--gold);color:var(--ink);padding:0 16px}
+.sg:disabled{opacity:.3;cursor:not-allowed}
+.pens{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.pc{font:inherit;font-size:.8rem;font-weight:700;border:0;border-radius:999px;padding:3px 9px;background:var(--tile);color:var(--ink);cursor:pointer}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.tl{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.18)}
+.tl.on{border-color:var(--gold)}
+.tl-h{display:flex;justify-content:space-between;align-items:baseline;font-size:.8rem;color:var(--mut)}
+.tl-h i{font-style:normal;font-weight:800;color:#7fe0a8}
+.tl-h i.up{color:#ff9a8a}
+.tl-b{display:grid;grid-template-columns:38px 1fr 38px;gap:4px;align-items:center;text-align:center}
+.tl-b b{font-size:1.2rem;font-variant-numeric:tabular-nums}
+.tl.on .tl-b b{color:var(--gold)}
+.tl-b button{font:inherit;font-weight:800;font-size:1.1rem;height:38px;border:1px solid var(--line);background:transparent;color:var(--tile);border-radius:10px;cursor:pointer}
+.tl-b button:disabled{opacity:.3;cursor:not-allowed}
+.tl-b .tog{grid-column:1/-1;font-size:.95rem}
+.tl-b .tog.on{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.fl2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 4px}
+.fc>span{display:block;font-size:.72rem;color:var(--mut);margin-bottom:3px;white-space:nowrap}
+.fc .in-line{display:flex;gap:4px;align-items:center}
+.fc input{flex:1;width:auto;min-width:0;height:34px;padding:0 4px;text-align:center;font-size:.95rem;border-width:1px;border-radius:8px}
+.fc input:disabled{opacity:.5}
+.fc .sg{height:34px;min-width:34px;padding:0 8px;font-size:.95rem;border-radius:8px}
+.pens{margin:6px 0 0}
 .players{display:grid;gap:10px}
 .pin{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;padding:6px 8px 6px 6px;transition:border-color .15s,background .15s}
 .pin:focus-within{border-color:var(--gold);background:rgba(0,0,0,.32)}
@@ -105,14 +137,23 @@ const n=v=>parseInt(v,10)||0;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=s=>document.querySelector(s);
 
-function freshCur(){const k=S.players.length;return{pen:Array(k).fill(''),rem:Array(k).fill(''),end:Array(k).fill(''),rec:Array(k).fill(false),fin:-1}}
-function sums(skip){
-  const t=S.players.map(()=>0),rc=S.players.map(()=>0);
-  S.history.forEach((h,hi)=>h.rows.forEach((r,i)=>{t[i]+=r.score;if(hi!==skip)rc[i]+=r.rec}));
-  return{t,rc};
+function freshCur(){const k=S.players.length,z=()=>Array(k).fill(0);return{pen:Array.from({length:k},()=>[]),penIn:Array(k).fill(''),rem:Array(k).fill(''),rec:z(),sil:z(),okey:z(),fin:-1}}
+function normCur(c){
+  const k=S.players.length;c=c||{};
+  const pen=Array.from({length:k},(_,i)=>{const v=(c.pen||[])[i];return Array.isArray(v)?v.map(n):(n(v)?[n(v)]:[])});
+  const num=a=>Array.from({length:k},(_,i)=>{const v=(a||[])[i];return v===true?1:Math.max(0,n(v))});
+  const str=a=>Array.from({length:k},(_,i)=>{const v=(a||[])[i];return v==null?'':String(v)});
+  return{pen,penIn:str(c.penIn),rem:str(c.rem),rec:num(c.rec).map(x=>Math.min(x,2)),sil:num(c.sil),okey:num(c.okey),fin:c.fin==null?-1:c.fin};
 }
-function rowScore(i){const c=S.cur;const rem=c.fin===i?0:n(c.rem[i]);return n(c.pen[i])+rem-(c.rec[i]?100:0)}
-function mkRows(){return S.players.map((_,k)=>({score:rowScore(k),rec:S.cur.rec[k]?1:0,fin:S.cur.fin===k?1:0,pen:n(S.cur.pen[k]),rem:S.cur.fin===k?0:n(S.cur.rem[k])}))}
+function sums(){
+  const t=S.players.map(()=>0);
+  S.history.forEach(h=>h.rows.forEach((r,i)=>{t[i]+=r.score}));
+  return{t};
+}
+function penSum(i){return S.cur.pen[i].reduce((a,b)=>a+b,0)}
+function rowScore(i){const c=S.cur;const fin=c.fin===i;const rem=fin?0:n(c.rem[i]);return penSum(i)+rem+100*c.okey[i]-100*c.rec[i]-100*c.sil[i]-(fin?100:0)}
+function commitPending(){S.cur.penIn.forEach((v,i)=>{if(n(v))S.cur.pen[i].push(n(v));S.cur.penIn[i]=''})}
+function mkRows(){return S.players.map((_,k)=>({score:rowScore(k),rec:S.cur.rec[k],sil:S.cur.sil[k],okey:S.cur.okey[k],fin:S.cur.fin===k?1:0,pen:penSum(k),penList:S.cur.pen[k].slice(),rem:S.cur.fin===k?0:n(S.cur.rem[k])}))}
 function recents(){try{return JSON.parse(localStorage.getItem('vmb-recent'))||[]}catch(e){return[]}}
 function saveRecent(names){try{const all=[...names,...recents()],seen={};const out=all.filter(x=>{const k=x.toLowerCase();return seen[k]?false:(seen[k]=1)}).slice(0,8);localStorage.setItem('vmb-recent',JSON.stringify(out))}catch(e){}}
 
@@ -145,7 +186,7 @@ function setupView(){
 }
 
 function gameView(){
-  const {t,rc}=sums();const lock=sums(S.edit).rc;const ed=S.edit!=null;
+  const {t}=sums();const c=S.cur;const ed=S.edit!=null;
   const r=(ed?S.edit:S.history.length)+1;
   const dl=((S.d0||0)+r-1)%S.players.length;
   const min=Math.min(...t);
@@ -156,12 +197,11 @@ function gameView(){
   ${ed?'<div class="banner">Düzenleme modu: kaydedince toplamlar yenilenir.</div>':''}
   ${!ed&&r===10?'<div class="banner">🧮 10. el: Toplama eli!</div>':''}
   ${!ed&&r===TOTAL?'<div class="banner" style="background:var(--red)">Son el! Bu el sonunda kazanan belli olacak.</div>':''}
-  <table class="score"><tr><th>Oyuncu</th><th>Rekor</th><th>Toplam</th></tr>
-  ${S.players.map((p,i)=>`<tr class="${lead[i]?'lead':''}"><td>${esc(p)}</td><td class="dots">${'●'.repeat(rc[i])}${'○'.repeat(2-rc[i])}</td><td>${t[i]}</td></tr>`).join('')}</table>
+  <table class="score"><tr><th>Oyuncu</th><th>Rekor (bu el)</th><th>Toplam</th></tr>
+  ${S.players.map((p,i)=>`<tr class="${lead[i]?'lead':''}"><td>${esc(p)}</td><td class="dots">${'●'.repeat(c.rec[i])}${'○'.repeat(2-c.rec[i])}</td><td>${t[i]}</td></tr>`).join('')}</table>
 
   <div class="sheet">
-    <div class="ln hd"><span></span><span>El içi ceza</span><span>Elde kalan</span><span>El</span></div>
-    ${S.players.map((p,i)=>playerRow(p,i,lock[i])).join('')}
+    ${S.players.map((p,i)=>playerRow(p,i)).join('')}
   </div>
 
   ${warn&&!ed?`<div class="banner warn">${esc(warn)}</div>`:''}
@@ -173,24 +213,37 @@ function gameView(){
   </div>`}`;
 }
 
-function playerRow(p,i,rcount){
-  const c=S.cur,fin=c.fin===i,on=c.rec[i],locked=rcount>=2&&!on,sc=rowScore(i);
-  return `<div class="pl"><div class="ln"><b>${esc(p)}</b>
-  <input aria-label="${esc(p)} el içi ceza" type="number" inputmode="numeric" placeholder="0" data-f="pen" data-i="${i}" value="${c.pen[i]}">
-  <input aria-label="${esc(p)} elde kalan" type="number" inputmode="numeric" placeholder="0" data-f="rem" data-i="${i}" value="${fin?0:c.rem[i]}" ${fin?'disabled':''}>
-  <span class="sc ${sc<0?'neg':''}" id="sc${i}">${sc>0?'+':''}${sc}</span></div>
-  <div class="acts"><button class="pill ${on?'on':''}" data-act="rec" data-i="${i}" ${locked?'disabled':''}>${on?'Rekor açtı −100':'Rekor'}</button>
-  <button class="pill ${fin?'on':''}" data-act="fin" data-i="${i}">${fin?'Bitirdi —':'Bitirdi'}</button></div></div>`;
+function tile(k,i,label,hint,up,cnt,max){
+  return `<div class="tl ${cnt?'on':''}"><div class="tl-h"><span>${label}</span><i class="${up?'up':''}">${hint}</i></div>
+  <div class="tl-b"><button data-act="step" data-k="${k}" data-d="-1" data-i="${i}" aria-label="${label} azalt" ${cnt?'':'disabled'}>−</button><b>${cnt}</b><button data-act="step" data-k="${k}" data-d="1" data-i="${i}" aria-label="${label} artır" ${cnt>=max?'disabled':''}>+</button></div></div>`;
+}
+function playerRow(p,i){
+  const c=S.cur,fin=c.fin===i,sc=rowScore(i),pl=c.pen[i];
+  return `<div class="pl"><div class="ph"><b>${esc(p)}</b><span class="sc ${sc<0?'neg':''}" id="sc${i}">${sc>0?'+':''}${sc}</span></div>
+  <div class="fl2">
+    <div class="fc"><span>El içi ceza${pl.length?' · '+penSum(i):''}</span><div class="in-line"><input aria-label="${esc(p)} el içi ceza" type="text" inputmode="numeric" autocomplete="off" placeholder="0" data-f="penIn" data-i="${i}" value="${esc(c.penIn[i])}">
+      <button class="sg" data-act="sign" data-f="penIn" data-i="${i}" aria-label="Eksi işareti">±</button>
+      <button class="sg add" data-act="penadd" data-i="${i}" aria-label="Cezayı ekle">+</button></div></div>
+    <div class="fc"><span>Elde kalan</span><div class="in-line"><input aria-label="${esc(p)} elde kalan" type="text" inputmode="numeric" autocomplete="off" placeholder="0" data-f="rem" data-i="${i}" value="${fin?0:esc(c.rem[i])}" ${fin?'disabled':''}>
+      <button class="sg" data-act="sign" data-f="rem" data-i="${i}" aria-label="Eksi işareti" ${fin?'disabled':''}>±</button></div></div>
+  </div>
+  ${pl.length?`<div class="pens">${pl.map((v,j)=>`<button class="pc" data-act="pendel" data-i="${i}" data-j="${j}" aria-label="${v} cezasını sil">${v>0?'+':''}${v} ✕</button>`).join('')}</div>`:''}
+  <div class="tiles">
+    ${tile('rec',i,'Rekor açtı','−100',0,c.rec[i],2)}
+    ${tile('sil',i,'Siler','−100',0,c.sil[i],99)}
+    ${tile('okey',i,'Okeyi alındı','+100',1,c.okey[i],99)}
+    <div class="tl ${fin?'on':''}"><div class="tl-h"><span>Bitti</span><i>−100</i></div><div class="tl-b"><button class="tog ${fin?'on':''}" data-act="fin" data-i="${i}">${fin?'✓ Bitirdi':'Bitirdi'}</button></div></div>
+  </div></div>`;
 }
 function historyView(){
   if(!S.history.length)return'';
   const ed=S.edit==null;
   return `<h2>El geçmişi${ed?' <span class="small">(düzeltmek için ele dokun)</span>':''}</h2><table class="hist"><tr><th>El</th>${S.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
-  ${S.history.map((h,hi)=>`<tr ${ed?`data-act="edit" data-i="${hi}" style="cursor:pointer"`:''}><td>${h.round}${ed?' ✎':''}</td>${h.rows.map(r=>`<td>${r.fin?'<b title="Eli bitirdi">—</b>'+(r.score?' '+r.score:''):r.score}${r.rec?' ●':''}</td>`).join('')}</tr>`).join('')}</table>`;
+  ${S.history.map((h,hi)=>`<tr ${ed?`data-act="edit" data-i="${hi}" style="cursor:pointer"`:''}><td>${h.round}${ed?' ✎':''}</td>${h.rows.map(r=>`<td>${r.fin?'<b title="Eli bitirdi">✓</b> ':''}${r.score}${r.rec?' '+'●'.repeat(r.rec):''}${r.sil?' ✂'+(r.sil>1?r.sil:''):''}${r.okey?' ◆'+(r.okey>1?r.okey:''):''}</td>`).join('')}</tr>`).join('')}</table><div class="small" style="margin-top:6px">✓ bitti · ● rekor · ✂ siler · ◆ okeyi alındı</div>`;
 }
 function recentView(){const r=recents();if(!r.length)return'';return `<div class="small" style="margin:12px 0 6px">Son oynayanlar</div><div class="chips">${r.map(x=>`<button class="chip sm" data-act="pick" data-n="${esc(x)}">${esc(x)}</button>`).join('')}</div>`}
 function statsView(){
-  const st=S.players.map((p,i)=>{let fin=0,rec=0,pen=0,worst=-Infinity;S.history.forEach(h=>{const r=h.rows[i];fin+=r.fin?1:0;rec+=r.rec?1:0;pen+=r.pen||0;worst=Math.max(worst,r.score)});return{fin,rec,pen,worst}});
+  const st=S.players.map((p,i)=>{let fin=0,rec=0,pen=0,worst=-Infinity;S.history.forEach(h=>{const r=h.rows[i];fin+=r.fin?1:0;rec+=r.rec||0;pen+=r.pen||0;worst=Math.max(worst,r.score)});return{fin,rec,pen,worst}});
   const mp=Math.max(...st.map(x=>x.pen));
   return `<h2>İstatistikler</h2><table class="hist"><tr><th>Oyuncu</th><th>Bitirme</th><th>Rekor</th><th>El içi ceza</th><th>En kötü el</th></tr>${S.players.map((p,i)=>`<tr><td>${esc(p)}</td><td>${st[i].fin}</td><td>${st[i].rec}</td><td>${mp>0&&st[i].pen===mp?'<b>'+st[i].pen+'</b>':st[i].pen}</td><td>${st[i].worst}</td></tr>`).join('')}</table>`;
 }
@@ -222,8 +275,18 @@ function winView(){
 
 document.addEventListener('input',e=>{
   const f=e.target.dataset.f;if(!f||!S.cur)return;warn='';
-  const i=+e.target.dataset.i;S.cur[f][i]=e.target.value;save();
-  const el=$('#sc'+i);if(el){const sc=rowScore(i);el.textContent=(sc>0?'+':'')+sc;el.className='sc'+(sc<0?' neg':'')}
+  const i=+e.target.dataset.i;
+  let v=e.target.value.replace(/[^\d-]/g,'');v=(v[0]==='-'?'-':'')+v.replace(/-/g,'');
+  if(v!==e.target.value)e.target.value=v;
+  S.cur[f][i]=v;save();updScore(i);
+});
+function updScore(i){const el=$('#sc'+i);if(el){const sc=rowScore(i);el.textContent=(sc>0?'+':'')+sc;el.className='sc'+(sc<0?' neg':'')}}
+function addPen(i){
+  const v=n(S.cur.penIn[i]);if(v)S.cur.pen[i].push(v);S.cur.penIn[i]='';
+  save();render();const inp=$('input[data-f="penIn"][data-i="'+i+'"]');if(inp)inp.focus();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.f==='penIn'){e.preventDefault();addPen(+e.target.dataset.i)}
 });
 
 document.addEventListener('click',e=>{
@@ -235,7 +298,16 @@ document.addEventListener('click',e=>{
     if(names.length<2){alert('En az 2 oyuncu adı yaz.');return}
     saveRecent(names);warn='';S={players:names,mult:S.pendingMult||1,history:[]};S.cur=freshCur();save();render();
   }
-  else if(act==='rec'){warn='';S.cur.rec[i]=!S.cur.rec[i];save();render()}
+  else if(act==='step'){
+    warn='';const k=b.dataset.k,d=+b.dataset.d,max=k==='rec'?2:99;
+    S.cur[k][i]=Math.max(0,Math.min(max,S.cur[k][i]+d));save();render();
+  }
+  else if(act==='penadd'){warn='';addPen(i)}
+  else if(act==='pendel'){warn='';S.cur.pen[i].splice(+b.dataset.j,1);save();render()}
+  else if(act==='sign'){
+    const f=b.dataset.f;let v=S.cur[f][i]||'';v=v[0]==='-'?v.slice(1):'-'+v;S.cur[f][i]=v;save();
+    const inp=$('input[data-f=\"'+f+'\"][data-i=\"'+i+'\"]');if(inp){inp.value=v;inp.focus()}updScore(i);
+  }
   else if(act==='fin'){
     warn='';const was=S.cur.fin===i;
     if(S.cur.fin>=0)S.cur.rem[S.cur.fin]='';
@@ -244,7 +316,8 @@ document.addEventListener('click',e=>{
     save();render();
   }
   else if(act==='finish'){
-    if(!warn){const m=S.cur.fin<0?'Kimse “Bitirdi” olarak işaretlenmedi.':S.players.every((_,k)=>rowScore(k)===0)?'Hiç puan yazılmadı.':'';
+    commitPending();
+    if(!warn){const m=S.cur.fin<0?'Kimse “Bitti” olarak işaretlenmedi.':S.players.every((_,k)=>rowScore(k)===0)?'Hiç puan yazılmadı.':'';
       if(m){warn=m+' Yine de eli bitirelim mi?';render();return}}
     warn='';
     const r=S.history.length+1;
@@ -254,11 +327,11 @@ document.addEventListener('click',e=>{
   else if(act==='edit'){
     if(S.edit!=null)return;warn='';
     const h=S.history[i];S.stash=S.cur;S.edit=i;
-    S.cur={pen:h.rows.map(r=>String(r.pen||'')),rem:h.rows.map(r=>r.fin?'0':String(r.rem!=null?r.rem:r.score+(r.rec?100:0))),rec:h.rows.map(r=>!!r.rec),fin:h.rows.findIndex(r=>r.fin)};
+    S.cur=normCur({pen:h.rows.map(r=>r.penList||(r.pen?[r.pen]:[])),rem:h.rows.map(r=>r.fin?'0':String(r.rem!=null?r.rem:r.score+(r.rec?100:0))),rec:h.rows.map(r=>r.rec),sil:h.rows.map(r=>r.sil),okey:h.rows.map(r=>r.okey),fin:h.rows.findIndex(r=>r.fin)});
     save();render();scrollTo(0,0);
   }
   else if(act==='saveedit'||act==='canceledit'){
-    if(act==='saveedit')S.history[S.edit].rows=mkRows();
+    if(act==='saveedit'){commitPending();S.history[S.edit].rows=mkRows()}
     S.cur=S.stash;delete S.stash;S.edit=null;save();render();scrollTo(0,0);
   }
   else if(act==='dealer'){S.d0=((S.d0||0)+1)%S.players.length;save();render()}
@@ -279,6 +352,7 @@ document.addEventListener('click',e=>{
 
 });
 function stashSetup(){S.pendingNames=[1,2,3,4].map(k=>($('#p'+k)||{}).value||'')}
+if(S.players){S.cur=normCur(S.cur);if(S.stash)S.stash=normCur(S.stash)}
 render();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
